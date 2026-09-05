@@ -1,7 +1,7 @@
 """Local try-out UI for investigate() - NOT part of the graded submission.
 
 Serves a small single-page app (index.html) that lets you run the real
-submissions/SideChallenge/solution.py against the built-in incidents or
+submissions/RakshaShalikaNethren/solution.py against the built-in incidents or
 a corpus you paste in yourself, and visualizes all three pipeline
 stages: retrieval ranking, correlation/hedge analysis, and the final
 structured report.
@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "data"))
-sys.path.insert(0, str(ROOT / "submissions" / "SideChallenge"))
+sys.path.insert(0, str(ROOT / "submissions" / "RakshaShalikaNethren"))
 
 from loader import load_incident  # noqa: E402
 import solution  # noqa: E402
