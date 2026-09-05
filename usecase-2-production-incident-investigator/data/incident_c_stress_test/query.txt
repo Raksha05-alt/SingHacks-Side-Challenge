@@ -1,0 +1,7 @@
+A small number of users are occasionally seeing checkout fail with a 500 error during peak hours.
+
+Identify the probable root cause with supporting evidence.
+
+Identify the impacted components and recommended remediation.
+
+What is the mean time to recover and the systems impacted.

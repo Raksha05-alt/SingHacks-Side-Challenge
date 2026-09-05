@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Production Incident Investigator — Try it out</title>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --border: #e2e2e6;
+    --text: #1d1d1f;
+    --muted: #6b6b70;
+    --accent: #3457d5;
+    --good: #1c8a4b;
+    --good-bg: #eafaf0;
+    --bad: #c22b2b;
+    --bad-bg: #fdeceb;
+    --code-bg: #f2f2f5;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16171a;
+      --panel: #1e2024;
+      --border: #303237;
+      --text: #eaeaec;
+      --muted: #9a9aa2;
+      --accent: #7c93ff;
+      --good: #4fd484;
+      --good-bg: #12261c;
+      --bad: #ff6b6b;
+      --bad-bg: #2a1414;
+      --code-bg: #26282d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin: 0 0 20px; font-size: 13px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .panel h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  select, button, input[type=text] {
+    font: inherit;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+  }
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  button:hover { opacity: .9; }
+  button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-weight: 500;
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  textarea {
+    width: 100%;
+    font: 13px/1.4 var(--mono);
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    color: var(--text);
+    resize: vertical;
+  }
+  label.field-label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin: 10px 0 4px;
+  }
+  .file-row { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+  .file-row .file-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .file-row input[type=text] { width: 260px; font-family: var(--mono); }
+  .chip {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--code-bg);
+    color: var(--muted);
+    margin: 2px 4px 2px 0;
+  }
+  .chip.good { background: var(--good-bg); color: var(--good); }
+  .chip.bad { background: var(--bad-bg); color: var(--bad); }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .badge.good { background: var(--good-bg); color: var(--good); }
+  .badge.bad { background: var(--bad-bg); color: var(--bad); }
+  .confidence-bar {
+    height: 10px;
+    border-radius: 6px;
+    background: var(--code-bg);
+    overflow: hidden;
+    margin: 6px 0 2px;
+  }
+  .confidence-fill { height: 100%; border-radius: 6px; transition: width .3s; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.score { font-family: var(--mono); white-space: nowrap; color: var(--accent); }
+  td.file { white-space: nowrap; color: var(--muted); font-size: 12px; }
+  .evidence-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .evidence-cols { grid-template-columns: 1fr; } }
+  .ev-card {
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .ev-card.supporting { background: var(--good-bg); border: 1px solid color-mix(in srgb, var(--good) 30%, transparent); }
+  .ev-card.hedged { background: var(--bad-bg); border: 1px solid color-mix(in srgb, var(--bad) 30%, transparent); }
+  .ev-card .fname { font-weight: 700; font-size: 12px; margin-bottom: 4px; }
+  .ev-card .excerpt { font-family: var(--mono); font-size: 12px; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+  .report-field { margin-bottom: 14px; }
+  .report-field .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 3px; }
+  .report-field .v { font-size: 14px; }
+  #status { font-size: 12px; color: var(--muted); }
+  #status.error { color: var(--bad); }
+  .empty { color: var(--muted); font-style: italic; font-size: 13px; }
+  details > summary { cursor: pointer; color: var(--accent); font-size: 12px; margin-top: 6px; }
+  .placeholder { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Production Incident Investigator — try it out</h1>
+  <p class="subtitle">Runs the real <code>solution.py</code> locally. Pick a built-in incident or paste your own query + documents, then watch all three pipeline stages: search → analysis → report.</p>
+
+  <div class="panel">
+    <h2>1 · Input</h2>
+    <div class="row">
+      <select id="incidentSelect"><option value="">Loading…</option></select>
+      <button id="runBtn">Run investigate()</button>
+      <button class="secondary" id="addFileBtn" style="display:none">+ Add file</button>
+      <span id="status"></span>
+    </div>
+    <label class="field-label">Symptom description (query)</label>
+    <textarea id="queryBox" rows="3"></textarea>
+    <label class="field-label">Corpus documents</label>
+    <div id="filesContainer"></div>
+  </div>
+
+  <div class="panel">
+    <h2>2 · Search — retrieval ranking</h2>
+    <div id="searchOut" class="empty">Run investigate() to see the top-ranked chunks against the query.</div>
+  </div>
+
+  <div class="panel">
+    <h2>3 · Analysis — correlation across sources</h2>
+    <div id="analysisOut" class="empty">Run investigate() to see which sources corroborate vs. hedge.</div>
+  </div>
+
+  <div class="panel">
+    <h2>4 · Report</h2>
+    <div id="reportOut" class="empty">Run investigate() to see the structured incident report.</div>
+  </div>
+</div>
+
+<script>
+const incidentSelect = document.getElementById('incidentSelect');
+const runBtn = document.getElementById('runBtn');
+const addFileBtn = document.getElementById('addFileBtn');
+const queryBox = document.getElementById('queryBox');
+const filesContainer = document.getElementById('filesContainer');
+const statusEl = document.getElementById('status');
+
+let editable = false;
+
+function setStatus(msg, isError) {
+  statusEl.textContent = msg || '';
+  statusEl.className = isError ? 'error' : '';
+}
+
+function renderFiles(corpus) {
+  filesContainer.innerHTML = '';
+  Object.entries(corpus).forEach(([name, text]) => addFileRow(name, text));
+}
+
+function addFileRow(name, text) {
+  const row = document.createElement('div');
+  row.className = 'file-row';
+  row.innerHTML = `
+    <div class="file-head">
+      <input type="text" class="fname" value="${name.replace(/"/g,'&quot;')}" ${editable ? '' : 'disabled'}>
+      ${editable ? '<button class="secondary remove-btn">Remove</button>' : ''}
+    </div>
+    <textarea class="ftext" rows="6" ${editable ? '' : 'readonly'}></textarea>
+  `;
+  row.querySelector('.ftext').value = text;
+  if (editable) {
+    row.querySelector('.remove-btn').onclick = () => row.remove();
+  }
+  filesContainer.appendChild(row);
+}
+
+function collectCorpus() {
+  const corpus = {};
+  filesContainer.querySelectorAll('.file-row').forEach(row => {
+    const name = row.querySelector('.fname').value.trim();
+    const text = row.querySelector('.ftext').value;
+    if (name) corpus[name] = text;
+  });
+  return corpus;
+}
+
+function setEditable(on) {
+  editable = on;
+  queryBox.readOnly = !on;
+  addFileBtn.style.display = on ? '' : 'none';
+  const corpus = collectCorpus();
+  renderFiles(corpus);
+}
+
+async function loadIncidents() {
+  const res = await fetch('/api/incidents');
+  const names = await res.json();
+  incidentSelect.innerHTML = '';
+  names.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = n;
+    incidentSelect.appendChild(opt);
+  });
+  const customOpt = document.createElement('option');
+  customOpt.value = '__custom__';
+  customOpt.textContent = '✎ Custom incident…';
+  incidentSelect.appendChild(customOpt);
+  if (names.length) await loadIncident(names[0]);
+}
+
+async function loadIncident(name) {
+  if (name === '__custom__') {
+    queryBox.value = '';
+    filesContainer.innerHTML = '';
+    setEditable(true);
+    addFileRow('logs.md', '');
+    setStatus('Custom mode: edit the query and documents, then Run.');
+    return;
+  }
+  setEditable(false);
+  const res = await fetch('/api/incident/' + encodeURIComponent(name));
+  const data = await res.json();
+  queryBox.value = data.query;
+  renderFiles(data.corpus);
+  setStatus('');
+}
+
+incidentSelect.onchange = () => loadIncident(incidentSelect.value);
+addFileBtn.onclick = () => addFileRow('new_file.md', '');
+
+function scoreColor(score) {
+  if (score >= 50) return 'var(--good)';
+  if (score >= 30) return '#d69e2e';
+  return 'var(--bad)';
+}
+
+function renderSearch(ranked) {
+  const out = document.getElementById('searchOut');
+  if (!ranked.length) { out.innerHTML = '<div class="empty">No chunks scored above zero for this query.</div>'; return; }
+  let rows = ranked.map(r => `
+    <tr>
+      <td class="score">${r.score.toFixed(3)}</td>
+      <td class="file">${r.file}</td>
+      <td>${escapeHtml(r.text.slice(0, 100))}</td>
+    </tr>`).join('');
+  out.innerHTML = `<table><thead><tr><th>score</th><th>file</th><th>chunk</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderAnalysis(evidence) {
+  const out = document.getElementById('analysisOut');
+  if (!evidence) { out.innerHTML = '<div class="empty">No candidate entity found in the top-ranked chunks.</div>'; return; }
+  const neighborChips = (evidence.neighbors || []).map(n => `<span class="chip">${escapeHtml(n)}</span>`).join('') || '<span class="placeholder">none</span>';
+  const supportingCards = Object.entries(evidence.supporting).map(([f, sec]) => `
+    <div class="ev-card supporting">
+      <div class="fname">✓ ${escapeHtml(f)}</div>
+      <div class="excerpt">${escapeHtml(sec.trim().slice(0, 260))}</div>
+    </div>`).join('') || '<div class="empty">none</div>';
+  const hedgedCards = Object.entries(evidence.hedged).map(([f, sec]) => `
+    <div class="ev-card hedged">
+      <div class="fname">✕ ${escapeHtml(f)}</div>
+      <div class="excerpt">${escapeHtml(sec.trim().slice(0, 260))}</div>
+    </div>`).join('') || '<div class="empty">none</div>';
+
+  out.innerHTML = `
+    <div class="report-field">
+      <div class="k">Anchor entity</div>
+      <div class="v"><span class="chip good" style="font-size:13px">${escapeHtml(evidence.entity)}</span></div>
+    </div>
+    <div class="report-field">
+      <div class="k">Co-occurring neighbors considered</div>
+      <div class="v">${neighborChips}</div>
+    </div>
+    <div class="report-field">
+      <div class="k">Net corroboration = supporting − hedged = ${Object.keys(evidence.supporting).length} − ${Object.keys(evidence.hedged).length} = ${evidence.net}</div>
+    </div>
+    <div class="evidence-cols">
+      <div>
+        <div class="k" style="margin-bottom:6px">Positively corroborates (no hedge)</div>
+        ${supportingCards}
+      </div>
+      <div>
+        <div class="k" style="margin-bottom:6px">Mentions it, but hedges/denies</div>
+        ${hedgedCards}
+      </div>
+    </div>
+  `;
+}
+
+function renderReport(result) {
+  const out = document.getElementById('reportOut');
+  const conf = result.confidence_score;
+  const badgeClass = result.needs_human_review ? 'bad' : 'good';
+  const evidenceItems = (result.supporting_evidence || []).map(e => `
+    <div class="ev-card supporting">
+      <div class="fname">${escapeHtml(e.source)}</div>
+      <div class="excerpt">${escapeHtml(e.excerpt)}</div>
+    </div>`).join('') || '<div class="empty">none</div>';
+  const systems = (result.impacted_systems || []).map(s => `<span class="chip">${escapeHtml(s)}</span>`).join('') || '<span class="placeholder">none identified</span>';
+
+  out.innerHTML = `
+    <div class="report-field">
+      <div class="k">Confidence</div>
+      <div class="v">
+        <strong>${conf}</strong> / 100
+        &nbsp; <span class="badge ${badgeClass}">${result.needs_human_review ? 'NEEDS HUMAN REVIEW' : 'high confidence'}</span>
+        <div class="confidence-bar"><div class="confidence-fill" style="width:${conf}%;background:${scoreColor(conf)}"></div></div>
+      </div>
+    </div>
+    <div class="report-field">
+      <div class="k">Root cause</div>
+      <div class="v">${escapeHtml(result.root_cause)}</div>
+    </div>
+    <div class="report-field">
+      <div class="k">Impacted systems</div>
+      <div class="v">${systems}</div>
+    </div>
+    <div class="report-field">
+      <div class="k">MTTR (minutes)</div>
+      <div class="v">${result.mttr_minutes === null ? '<span class="placeholder">unknown / not confidently extracted</span>' : result.mttr_minutes}</div>
+    </div>
+    <div class="report-field">
+      <div class="k">Remediation</div>
+      <div class="v">${escapeHtml(result.remediation)}</div>
+    </div>
+    <div class="report-field">
+      <div class="k">Supporting evidence</div>
+      <div class="v">${evidenceItems}</div>
+    </div>
+    <details>
+      <summary>Raw JSON</summary>
+      <textarea rows="14" readonly>${escapeHtml(JSON.stringify(result, null, 2))}</textarea>
+    </details>
+  `;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+runBtn.onclick = async () => {
+  const query = queryBox.value;
+  const corpus = collectCorpus();
+  if (!query.trim()) { setStatus('Query is empty.', true); return; }
+  if (!Object.keys(corpus).length) { setStatus('Corpus has no documents.', true); return; }
+  setStatus('Running…');
+  runBtn.disabled = true;
+  try {
+    const res = await fetch('/api/investigate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query, corpus}),
+    });
+    const data = await res.json();
+    if (data.error) { setStatus('Error: ' + data.error, true); return; }
+    renderSearch(data.ranked);
+    renderAnalysis(data.evidence);
+    renderReport(data.result);
+    setStatus('Done.');
+  } catch (e) {
+    setStatus('Request failed: ' + e, true);
+  } finally {
+    runBtn.disabled = false;
+  }
+};
+
+loadIncidents();
+</script>
+</body>
+</html>

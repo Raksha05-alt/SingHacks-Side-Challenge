@@ -1,0 +1,5 @@
+issue_id,title,signature,affected_component,notes
+KI-201,Cart abandonment after idle timeout,Carts are cleared after 30 minutes of inactivity,cart-service,By design; not a defect
+KI-207,Price cache staleness,Promotion prices can lag the source system by a few minutes after a rule change,pricing-service,Known limitation of the scheduled cache refresh
+KI-214,Occasional inventory reservation retry,inventory-service sometimes needs a second lock-acquisition attempt under concurrent access to the same SKU,inventory-service,A similar pattern was raised previously but a root cause was never pinned down; retries have always resolved successfully so far
+KI-233,Search index staleness,Product search results lag behind catalog updates,search-service,Known limitation of the current indexing pipeline
